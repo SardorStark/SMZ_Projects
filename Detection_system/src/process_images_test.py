@@ -50,7 +50,8 @@ def process_image(model, img_path, conf_thres=0.25, start_idx=0):
         print(f"⚠️ Rasm o'qib bo'lmadi: {img_path}")
         return [], 0
 
-    results = model(img_bgr, verbose=False)
+    # Run inference with given confidence threshold
+    results = model(img_bgr, conf=conf_thres, verbose=False)
     annotated = results[0].plot() if hasattr(results[0], 'plot') else img_bgr.copy()
 
     rows = []
@@ -71,7 +72,13 @@ def process_image(model, img_path, conf_thres=0.25, start_idx=0):
     for box in boxes:
         cls = int(box.cls[0])
         conf = float(box.conf[0])
-        x1, y1, x2, y2 = map(int, box.xyxy[0])
+        # safe extraction of coordinates (torch tensor or numpy)
+        coords = box.xyxy[0]
+        try:
+            coords = coords.cpu().numpy()
+        except Exception:
+            pass
+        x1, y1, x2, y2 = map(int, coords)
         area = (x2 - x1) * (y2 - y1)
 
         # Crop and save defect image
@@ -163,8 +170,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-train: ../images/train
-val:   ../images/val
-nc: 1
-names: ['yoriq']
